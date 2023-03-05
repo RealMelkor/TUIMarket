@@ -4,6 +4,15 @@ Fetch informations about stocks, currencies, cryptocurrencies in your terminal.
 
 =>img/img.png Screenshot
 
+## Configuration
+
+The program will load a list of symbols from one of those files :
+* .config/tuimarket/symbols
+* .tuimarket/symbols
+* .tuimarket_symbols
+
+The file will be read one symbol per line.
+
 ## Keybindings
 
 * k, up arrow	- scroll up
