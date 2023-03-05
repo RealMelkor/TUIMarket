@@ -1,4 +1,4 @@
-# tuimarket
+# TUIMarket
 
 Fetch informations about stocks, currencies, cryptocurrencies in your terminal.
 The program uses Yahoo Finance api.
@@ -8,9 +8,9 @@ The program uses Yahoo Finance api.
 ## Configuration
 
 The program will loads a list of symbols from one of those files :
-* .config/tuimarket/symbols
-* .tuimarket/symbols
-* .tuimarket_symbols
+* ~/.config/tuimarket/symbols
+* ~/.tuimarket/symbols
+* ~/.tuimarket_symbols
 
 The file will be read one symbol per line.
 
