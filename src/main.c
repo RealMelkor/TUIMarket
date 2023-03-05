@@ -44,6 +44,7 @@ struct mem {
 struct mem chunk;
 
 static size_t writecb(void *contents, size_t size, size_t nmemb, void *userp) {
+
 	size_t realsize = size * nmemb;
 	struct mem *mem = (struct mem*)userp;
 
@@ -77,8 +78,8 @@ char *handle_url(char *url, size_t *len) {
 	curl_easy_cleanup(curl_handle);
 
 	if(res != CURLE_OK) {
-		fprintf(stderr, "curl_easy_perform() failed: %s\n",
-		curl_easy_strerror(res));
+		printf("curl_easy_perform() failed: %s\n",
+			curl_easy_strerror(res));
 		return NULL;
 	}
 
@@ -295,18 +296,22 @@ int main(int argc, char *argv[]) {
 		symbol = symbols;
 		bottom = 1;
 		while (symbol) {
-			int gain;
+			int gain, j;
 			if (scroll >= i) {
 				symbol = symbol->next;
 				i++;
 				continue;
 			}
-			gain = (symbol->price > symbol->previous_price);
+			gain = (symbol->price >= symbol->previous_price);
 			tb_print(col_symbol, i - scroll,
 					TB_DEFAULT, TB_DEFAULT,
 					symbol->symbol);
 			tb_print(col_name, i - scroll, TB_DEFAULT, TB_DEFAULT,
 					symbol->name);
+
+			j = w + col_price - 2;
+			while (j++ < w)
+				tb_set_cell(j, i, ' ', TB_DEFAULT, TB_DEFAULT);
 			tb_printf(w + col_price, i - scroll,
 					TB_DEFAULT, TB_DEFAULT,
 					"%.2f", symbol->price);
@@ -327,10 +332,11 @@ int main(int argc, char *argv[]) {
 		tb_present();
 
 		if (!tb_peek_event(&ev, 1000)) {
-			if (ev.key == TB_KEY_ESC) break;
-			if (ev.ch == 'q') break;
-			if (ev.ch == 'j' && !bottom) scroll++;
-			if (ev.ch == 'k' && scroll) scroll--;
+			if (ev.key == TB_KEY_ESC || ev.ch == 'q') break;
+			if ((ev.key == TB_KEY_ARROW_DOWN || ev.ch == 'j') &&
+				!bottom) scroll++;
+			if ((ev.key == TB_KEY_ARROW_UP || ev.ch == 'k') &&
+				scroll) scroll--;
 		}
 
 	}
