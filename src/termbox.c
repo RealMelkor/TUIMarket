@@ -25,6 +25,7 @@ SOFTWARE.
 /* this file was edited to respect the C89 standard */
 
 #ifdef __OpenBSD__
+#undef _POSIX_C_SOURCE
 #include <signal.h>
 #endif
 

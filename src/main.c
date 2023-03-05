@@ -138,7 +138,7 @@ static int load_symbols() {
 
 	while (1) {
 
-		struct symbol s, *new;
+		struct symbol s = {0}, *new;
 		size_t len;
 
 		if (!fgets(s.symbol, sizeof(s.symbol), f)) break;
