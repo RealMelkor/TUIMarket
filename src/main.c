@@ -7,6 +7,7 @@
 #include <pwd.h>
 #include <time.h>
 #include <pthread.h>
+#include <errno.h>
 #include <curl/curl.h>
 #include "termbox.h" 
 #include "strlcpy.h" 
@@ -14,7 +15,7 @@
 #ifndef PATH_MAX
 #define PATH_MAX 1024
 #endif
-#define SIZEOF(X) sizeof(X)/sizeof(*X)
+#define SIZEOF(X) sizeof(X) / sizeof(*X)
 
 #define INTERVAL 5 /* update informations every x seconds */
 
@@ -302,7 +303,10 @@ int main(int argc, char *argv[]) {
 
 	curl_global_init(CURL_GLOBAL_ALL);
 
-	if (tb_init()) return -1;
+	if (tb_init()) {
+		printf("tb_init: %s\n", strerror(errno));
+		return -1;
+	}
 
 	pthread_create(&thread, NULL, update_thread, NULL);
 
