@@ -177,24 +177,39 @@ static int find_copy(const char *haystack, const char *needle,
 	return 0;
 }
 
-static int update_symbol(struct symbol *symbol) {
+static int update_symbols() {
 
-	char buf[64], url[1024], *data;
+	struct symbol *symbol;
+	char buf[64], url[4096 * 4], all[4096 * 4], *start, *end, *data;
 	size_t len;
 	int ret = -1;
 
+	symbol = symbols;
+	len = 0;
+	while (symbol) {
+		len += snprintf(&all[len], sizeof(all) - len,
+				"%s,", symbol->symbol);
+		symbol = symbol->next;
+	}
+	if (!len) return -1;
+	all[len - 1] = 0;
+
 	snprintf(url, sizeof(url), query,
 			"regularMarketChange,regularMarketPrice,shortName,",
-			symbol->symbol);
+			all);
 
 	data = handle_url(url, &len);
 	if (!data) return -1;
 
+	symbol = symbols;
+	start = data;
+	end = start + len - 1;
+	*end = 0;
+next:
 	if (find_copy(data, str_price, sizeof(str_price), ',', buf,
 				sizeof(buf)))
 		goto clean;
 	symbol->price = atof(buf);
-
 	
 	if (find_copy(data, str_old_price, sizeof(str_old_price), ',', buf,
 				sizeof(buf)))
@@ -209,25 +224,33 @@ static int update_symbol(struct symbol *symbol) {
 				sizeof(symbol->name)))
 		goto clean;
 
+	data = strstr(data, str_price);
+	while (data && *data && data < end) {
+		if (*data == '{') {
+			if (!strstr(data, str_price)) break;
+			symbol = symbol->next;
+			goto next;
+		}
+		data++;
+	}
+
 	ret = 0;
 clean:
-	free(data);
-
-	if (symbol->next) update_symbol(symbol->next);
+	free(start);
 
 	return ret;
 }
 
 void *update_thread(void *ptr) {
 	while (!ptr) {
-		update_symbol(symbols);
+		update_symbols();
 		sleep(5);
 	}
 	return ptr;
 }
 
 const int col_symbol = 2;
-const int col_name = col_symbol + sizeof("Symbol |");
+const int col_name = col_symbol + sizeof("Symbol |") + 1;
 const int col_variation = -(signed)sizeof("Variation") - 8;
 const int col_price = col_variation -(signed)sizeof("| Price") - 3;
 
@@ -303,7 +326,7 @@ int main(int argc, char *argv[]) {
 
 		tb_present();
 
-		if (!tb_poll_event(&ev)) {
+		if (!tb_peek_event(&ev, 1000)) {
 			if (ev.key == TB_KEY_ESC) break;
 			if (ev.ch == 'q') break;
 			if (ev.ch == 'j' && !bottom) scroll++;
