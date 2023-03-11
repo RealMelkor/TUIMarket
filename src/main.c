@@ -156,6 +156,7 @@ static int load_symbols() {
 		new->next = symbols;
 		symbols = new;
 	}
+	fclose(f);
 
 	return 0;
 }
@@ -274,21 +275,24 @@ clean:
 }
 
 void *update_thread(void *ptr) {
-	while (!ptr) {
+	int *run = ptr, counter;
+	while (*run) {
 		update_symbols();
-		sleep(INTERVAL);
+		counter = 0;
+		while (counter++ < INTERVAL && *run)
+			sleep(1);
 	}
 	return ptr;
 }
 
-const int col_symbol = 2;
-const int col_name = col_symbol + sizeof("Symbol |") + 1;
-const int col_variation = -(signed)sizeof("Variation") - 8;
-const int col_price = col_variation -(signed)sizeof("| Price") - 3;
+#define COL_SYMBOL 2
+#define COL_NAME (COL_SYMBOL + sizeof("Symbol |") + 1)
+#define COL_VARIATION (-(signed)sizeof("Variation") - 8)
+#define COL_PRICE (COL_VARIATION -(signed)sizeof("| Price") - 3)
 
 int main(int argc, char *argv[]) {
 
-	int scroll = 0;
+	int scroll = 0, run;
 	pthread_t thread;
 
 	if (!argc) return sizeof(*argv);
@@ -308,7 +312,8 @@ int main(int argc, char *argv[]) {
 		return -1;
 	}
 
-	pthread_create(&thread, NULL, update_thread, NULL);
+	run = 1;
+	pthread_create(&thread, NULL, update_thread, &run);
 
 	while (1) {
 
@@ -323,10 +328,10 @@ int main(int argc, char *argv[]) {
 		i = 0;
 		while (i++ < w) tb_set_cell(i, 0, ' ', TB_BLACK, TB_WHITE);
 
-		tb_print(col_symbol - 2, 0, TB_BLACK, TB_WHITE, " Symbol");
-		tb_print(col_name - 2, 0, TB_BLACK, TB_WHITE, "| Name");
-		tb_print(w + col_price - 2, 0, TB_BLACK, TB_WHITE, "| Price");
-		tb_print(w + col_variation - 2, 0,
+		tb_print(COL_SYMBOL - 2, 0, TB_BLACK, TB_WHITE, " Symbol");
+		tb_print(COL_NAME - 2, 0, TB_BLACK, TB_WHITE, "| Name");
+		tb_print(w + COL_PRICE - 2, 0, TB_BLACK, TB_WHITE, "| Price");
+		tb_print(w + COL_VARIATION - 2, 0,
 				TB_BLACK, TB_WHITE, "| Variation");
 		
 		i = 1;
@@ -340,19 +345,19 @@ int main(int argc, char *argv[]) {
 				continue;
 			}
 			gain = (symbol->price >= symbol->previous_price);
-			tb_print(col_symbol, i - scroll,
+			tb_print(COL_SYMBOL, i - scroll,
 					TB_DEFAULT, TB_DEFAULT,
 					symbol->symbol);
-			tb_print(col_name, i - scroll, TB_DEFAULT, TB_DEFAULT,
+			tb_print(COL_NAME, i - scroll, TB_DEFAULT, TB_DEFAULT,
 					symbol->name);
 
-			j = w + col_price - 2;
+			j = w + COL_PRICE - 2;
 			while (j++ < w)
 				tb_set_cell(j, i, ' ', TB_DEFAULT, TB_DEFAULT);
-			tb_printf(w + col_price, i - scroll,
+			tb_printf(w + COL_PRICE, i - scroll,
 					TB_DEFAULT, TB_DEFAULT,
 					"%.2f", symbol->price);
-			tb_printf(w + col_variation + gain, i - scroll,
+			tb_printf(w + COL_VARIATION + gain, i - scroll,
 					gain ? TB_GREEN : TB_RED,
 					TB_DEFAULT, "%.2f (%.2f%%)",
 					symbol->price - symbol->previous_price,
@@ -378,8 +383,15 @@ int main(int argc, char *argv[]) {
 
 	}
 
+	run = 0;
 	tb_shutdown();
 	curl_global_cleanup();
+	free(url);
+	while (symbols) {
+		struct symbol *s = symbols;
+		symbols = symbols->next;
+		free(s);
+	}
 
 	return 0;
 }
